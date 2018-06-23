@@ -19,6 +19,7 @@ namespace ThorCOM.Parser
         public const string COMMAND_OUTPUT_PATH = "output";
         public const string COMMAND_PATH_FEATURE_MODEL = "model";
         public const string COMMAND_PATH_FEATURE_DISTRIBUTION = "feature_distribution";
+        public const string COMMAND_PATH_FEATURE_DEGREE_DISTRIBUTION = "feature_degree_distribution";
         public const string COMMAND_PATH_INTERACTION_DISTRIBUTION = "interaction_distribution";
         public const string COMMAND_PATH_VARIANT_DISTRIBUTION = "variant_distribution";
         public const string COMMAND_RNG_SEED = "seed";
@@ -119,6 +120,7 @@ namespace ThorCOM.Parser
         private bool draw_pareto_3d;
         private bool write_finished;
         private string featurepath;
+        private string featuredegreepath;
         private string interactionpath;
         private string variantpath;
         private BackgroundWorker backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
@@ -243,6 +245,10 @@ namespace ThorCOM.Parser
                                         break;
                                 }
                                 featurepath = argument[1];
+                                break;
+                            case COMMAND_PATH_FEATURE_DEGREE_DISTRIBUTION:
+                                featuredegreepath = argument[1];
+                                Console.WriteLine("Feature Degree Path: " + featuredegreepath);
                                 break;
                             case COMMAND_PATH_INTERACTION_DISTRIBUTION:
                                 switch (argument[1])
@@ -564,6 +570,13 @@ namespace ThorCOM.Parser
                         featdist.DistType = Distribution.DistributionType.Feature;
                         break;
                     }
+                case "featuredegree":
+                    {
+                        featdist.Name = "featDegFromFile";
+                        featdist.DisplayName = "featDeg";
+                        featdist.DistType = Distribution.DistributionType.FeatureDegree;
+                        break;
+                    }
                 case "interaction":
                     {
                         featdist.Name = "interacFromFile";
@@ -651,6 +664,7 @@ namespace ThorCOM.Parser
                         try
                         {
                             _model.DStore.SelectedFeatureDistribution = CreateDistFromFile(featurepath, "feature");
+                            _model.DStore.SelectedFeatureDegreeDistribution = CreateDistFromFile(featuredegreepath, "featuredegree");
                         }
                         catch (Exception e) { Console.WriteLine(e); }
                         if (_model.Setting.SelectedFeature == 0) { _model.CreateNormalDist(2, Distribution.DistributionType.Feature); }

@@ -12,6 +12,7 @@ namespace InteracGenerator
         public enum DistributionType
         {
             Feature,
+            FeatureDegree,
             Interaction,
             Variant
         }

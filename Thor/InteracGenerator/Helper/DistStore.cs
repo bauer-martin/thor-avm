@@ -25,6 +25,18 @@ namespace InteracGenerator
             }
         }
 
+        private Distribution _selectedFdd;
+        // probability that a feature interacts with itself
+        public Distribution SelectedFeatureDegreeDistribution
+        {
+            get { return _selectedFdd; }
+            set
+            {
+                _selectedFdd = value;
+                RIntegrator.PlotValues(_selectedFdd, _model.Setting.FeatureAdjust);
+            }
+        }
+
         private Distribution _selectedId;
         public Distribution SelectedInteractionDistribution
         {

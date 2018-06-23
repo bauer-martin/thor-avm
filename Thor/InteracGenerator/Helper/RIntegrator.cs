@@ -132,6 +132,9 @@ namespace InteracGenerator
                 case Distribution.DistributionType.Feature:
                     dist.ImagePath = "fDist.png";
                     break;
+                case Distribution.DistributionType.FeatureDegree:
+                    dist.ImagePath = "fdDist.png";
+                    break;
                 case Distribution.DistributionType.Interaction:
                     dist.ImagePath = "iDist.png";
                     break;
