@@ -18,7 +18,7 @@ namespace InteracGenerator.InteracWeaving
 
         protected AbstractWeaver(Thor model)
         {
-            Rand = new Random();
+            Rand = new Random(model.Setting.RngSeed);
             Model = model;
         }
 

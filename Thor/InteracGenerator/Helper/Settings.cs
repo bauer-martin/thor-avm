@@ -31,6 +31,7 @@ namespace InteracGenerator
         public bool Dimacs;
         public List<string> DimacsFeatureList;
         public string FileName;
+        public int RngSeed;
 
         private int _numberOfInteractions;
         public bool LoadedInteractions;

@@ -62,6 +62,7 @@ namespace InteracGenerator
                 Engine.Evaluate("require(scatterplot3d)");
                 Engine.Evaluate("suppressMessages(library(scatterplot3d,lib.loc='./RPackages'))");
                 Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("en-US");
+                Engine.Evaluate("set.seed(" + model.Setting.RngSeed + ")");
                 return true;
             }
             catch (EvaluationException)

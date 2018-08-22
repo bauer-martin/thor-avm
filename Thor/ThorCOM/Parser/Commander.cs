@@ -21,6 +21,7 @@ namespace ThorCOM.Parser
         public const string COMMAND_PATH_FEATURE_DISTRIBUTION = "feature_distribution";
         public const string COMMAND_PATH_INTERACTION_DISTRIBUTION = "interaction_distribution";
         public const string COMMAND_PATH_VARIANT_DISTRIBUTION = "variant_distribution";
+        public const string COMMAND_RNG_SEED = "seed";
 
         public const string COMMAND_FEATUREMODEL_NUMBER_OF_INTERACTIONS = "interaction_count";
         public const string COMMAND_FEATUREMODEL_INTERACTION = "interaction_degrees";
@@ -278,6 +279,9 @@ namespace ThorCOM.Parser
                             //PATH
                             case COMMAND_OUTPUT_PATH:
                                 output_path = argument[1];
+                                break;
+                            case COMMAND_RNG_SEED:
+                                _model.Setting.RngSeed = Convert.ToInt32(argument[1]);
                                 break;
 
                             //FEATURE
