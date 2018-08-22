@@ -130,6 +130,7 @@
     <Compile Include="Helper\RIntegrator.cs" />
     <Compile Include="VariantGenerators\VariantAttributeCalculator.cs" />
     <Compile Include="VariantGenerators\VariantGenerator.cs" />
+    <Compile Include="InteracWeaving\CombinedWeaver.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

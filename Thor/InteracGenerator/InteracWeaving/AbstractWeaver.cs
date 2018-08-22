@@ -58,7 +58,7 @@ namespace InteracGenerator.InteracWeaving
 
         public abstract void SetUpWeaver();
 
-        public List<T> SelectRandomInteraction(int order)
+        public virtual List<T> SelectRandomInteraction(int order)
         {
             var rands = new List<int>(order);
             var options = new T[order];
@@ -152,7 +152,7 @@ namespace InteracGenerator.InteracWeaving
         /// </summary>
         /// <param name="newConfig"></param>
         /// <returns></returns>
-        private bool AlreadyFoundInteraction(ICollection<T> newConfig)
+        protected virtual bool AlreadyFoundInteraction(ICollection<T> newConfig)
         {
             foreach (var foundInter in FoundInteractions)
             {

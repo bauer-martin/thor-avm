@@ -35,6 +35,7 @@ namespace InteracGenerator
         public Dictionary<int, SolutionContainer> History;
         public List<SolutionContainer> BestSolutions;
         public SolutionContainer BestSolution;
+        public List<Configuration> generatedVariantsForWholePopulation;
         public enum ProbType
         {
             Feat, Interac, Variant, FeatInterac, FeatVariant, InteracVariant, Complete, NotImplemented,
@@ -547,6 +548,7 @@ namespace InteracGenerator
 
 
         private List<List<BinaryOption>> FoundInteractions;
+        private List<List<ConfigurationOption>> FoundInteractionsForWholePopulation;
 
         public VariabilityModel Vm;
         public string FeatureTestMethod;
@@ -711,7 +713,11 @@ namespace InteracGenerator
             else if (fileName.EndsWith(".xml") && File.ReadAllLines(fileName)[0].StartsWith("<vm name="))
             {
                 Vm = VariabilityModel.loadFromXML(fileName);
-                Setting.NumberOfFeatures = Vm.BinaryOptions.Count;
+                if (Setting.printsWholePopulation) {
+                    Setting.NumberOfFeatures = Vm.BinaryOptions.Count + Vm.NumericOptions.Count;
+                } else {
+                    Setting.NumberOfFeatures = Vm.BinaryOptions.Count;
+                }
             }
             else
             {
@@ -792,6 +798,22 @@ namespace InteracGenerator
 
         }
 
+        public void CreateInteractionsForWholePopulation(DoWorkEventArgs e, BackgroundWorker worker)
+        {
+            if (Setting.NumberOfInteractions == 0) return;
+
+            Distribution features = DStore.SelectedFeatureDistribution;
+            Distribution interactions = DStore.SelectedInteractionDistribution;
+
+            var weaver = new CombinedWeaver(this);
+            weaver.SetVariabilityModel(Vm);
+            var allOptions = new List<ConfigurationOption>(Vm.BinaryOptions.Count() + Vm.NumericOptions.Count());
+            allOptions.AddRange(Vm.BinaryOptions);
+            allOptions.AddRange(Vm.NumericOptions);
+            weaver.WeaveInteractions(allOptions, features, interactions, worker);
+            FoundInteractionsForWholePopulation = weaver.GetInteractions();
+        }
+
 
         public void WriteFoundDimacsInteractions(string fileName = "foundInteractions.txt")
         {
@@ -846,6 +868,207 @@ namespace InteracGenerator
                 //    FoundInteractions, DStore.SelectedInteractionDistribution.Values);
             }
            
+        }
+
+        public void CreateVariantsForWholePopulation(BackgroundWorker worker, DoWorkEventArgs e)
+        {
+            var heuristiclist = CreateHeuristicSettings();
+
+            var generator = new VariantGenerator(Vm);
+            var gen = new Stopwatch();
+            gen.Start();
+
+            List<List<BinaryOption>> binaryVariants = generator.GenerateVariants(heuristiclist, worker);
+
+            // set number of possible levels for each VariableFeature
+            var numberOfLevels = new Dictionary<NumericOption, int>();
+            foreach (NumericOption vf in Vm.NumericOptions)
+            {
+                int posLevels = vf.getAllValues().Count;
+
+                if (posLevels <= 4) // include all levels if # <= 4
+                {
+                    numberOfLevels.Add(vf, posLevels);
+                }
+                else
+                {
+                    numberOfLevels.Add(vf, Convert.ToInt32(4 + Math.Round(Math.Sqrt(posLevels) / 2.0))); // rescale
+                }
+            }
+
+            Dictionary<NumericOption, List<double>> allValuesOfNumericOptions = new Dictionary<NumericOption, List<double>>();
+            foreach (NumericOption vf in Vm.NumericOptions)
+            {
+                allValuesOfNumericOptions.Add(vf, vf.getAllValues());
+            }
+
+            List<Dictionary<NumericOption, double>> numericVariants = getAllPossibleCombinations(allValuesOfNumericOptions);
+
+            generatedVariantsForWholePopulation = Configuration.getConfigurations(binaryVariants, numericVariants);
+
+            gen.Stop();
+
+            Console.WriteLine("Variants: " + generatedVariantsForWholePopulation.Count + " Time: " + gen.ElapsedMilliseconds);
+        }
+
+        private List<Dictionary<NumericOption, double>> getAllPossibleCombinations(Dictionary<NumericOption, List<double>> elementValuePairs)
+        {
+            List<Dictionary<NumericOption, double>> allCombiantions = new List<Dictionary<NumericOption, double>>();
+            int[] positions = new int[elementValuePairs.Keys.Count];
+
+            int featureToIncrement = 0;
+            Boolean notIncremented = true;
+
+            do
+            {
+                notIncremented = true;
+
+                // tests whether all combinations are computed
+                if (featureToIncrement == elementValuePairs.Keys.Count)
+                {
+                    return allCombiantions;
+                }
+                Dictionary<NumericOption, double> values = getValues(elementValuePairs, positions);
+                allCombiantions.Add(values);
+
+                do
+                {
+                    if (positions[featureToIncrement] == elementValuePairs.ElementAt(featureToIncrement).Value.Count - 1)
+                    {
+                        positions[featureToIncrement] = 0;
+                        featureToIncrement++;
+                    }
+                    else
+                    {
+                        positions[featureToIncrement] = positions[featureToIncrement] + 1;
+                        notIncremented = false;
+                        featureToIncrement = 0;
+                    }
+
+                } while (notIncremented && !(featureToIncrement == elementValuePairs.Keys.Count));
+
+            } while (true);
+        }
+
+        private Dictionary<NumericOption, double> getValues(Dictionary<NumericOption, List<double>> optionValuePairs, int[] positions)
+        {
+            Dictionary<NumericOption, double> numericOptions = new Dictionary<NumericOption, double>();
+
+            for (int i = 0; i < optionValuePairs.Count; i++)
+            {
+                numericOptions.Add(optionValuePairs.ElementAt(i).Key, optionValuePairs.ElementAt(i).Value[positions[i]]);
+            }
+            return numericOptions;
+        }
+
+        public void PrintWholePopulation(String targetFolder)
+        {
+            List<ConfigurationOption> allOptions = new List<ConfigurationOption>();
+            allOptions.AddRange(Vm.BinaryOptions);
+            allOptions.AddRange(Vm.NumericOptions);
+            var sb = new StringBuilder();
+
+            // CSV header
+            foreach (ConfigurationOption option in allOptions)
+            {
+                sb.Append(option).Append(",");
+            }
+            sb.Append("NFP");
+            sb.AppendLine();
+
+            // CSV body
+            foreach (Configuration variant in generatedVariantsForWholePopulation)
+            {
+                foreach (ConfigurationOption feature in allOptions)
+                {
+                    double value;
+                    if (feature is NumericOption numericOption)
+                    {
+                        value = variant.NumericOptions.ContainsKey(numericOption) ? variant.NumericOptions[numericOption] : 0;
+                    }
+                    else if (feature is BinaryOption binaryOption)
+                    {
+                        value = variant.BinaryOptions.ContainsKey(binaryOption) ? 1 : 0;
+                    }
+                    else
+                    {
+                        throw new Exception("unknown option type");
+                    }
+                    sb.Append(value).Append(",");
+                }
+                sb.Append(ComputeNFP(variant, allOptions)).AppendLine();
+            }
+            File.WriteAllText(targetFolder + Path.DirectorySeparatorChar + "WholePopulation.csv", sb.ToString());
+        }
+
+        private double ComputeNFP(Configuration variant, List<ConfigurationOption> allOptions)
+        {
+            Distribution distArrayIndividual = DStore.SelectedFeatureDistribution;
+            Distribution distArrayInteractions = DStore.SelectedInteractionDistribution;
+            double nfp = 0;
+
+            // individual influence (Binary Options)
+            foreach (KeyValuePair<BinaryOption, BinaryOption.BinaryValue> entry in variant.BinaryOptions)
+            {
+                var index = allOptions.IndexOf(entry.Key);
+                double coefficient = distArrayIndividual.Values[index];
+                nfp += coefficient;
+            }
+
+            // individual influence (Numeric Options)
+            foreach (KeyValuePair<NumericOption, double> entry in variant.NumericOptions)
+            {
+                var index = allOptions.IndexOf(entry.Key);
+                double coefficient = distArrayIndividual.Values[index];
+                nfp += coefficient * entry.Value;
+            }
+
+            // find all enabled features
+            HashSet<ConfigurationOption> selectedOptions = new HashSet<ConfigurationOption>();
+            foreach (List<ConfigurationOption> interaction in FoundInteractionsForWholePopulation)
+            {
+                foreach (ConfigurationOption feature in interaction)
+                {
+                    if (feature is BinaryOption binaryOption && variant.BinaryOptions.ContainsKey(binaryOption))
+                    {
+                        selectedOptions.Add(feature);
+                    }
+                    else if (feature is NumericOption numericOption && variant.NumericOptions.ContainsKey(numericOption))
+                    {
+                        selectedOptions.Add(feature);
+                    }
+                }
+            }
+
+            // interaction influence
+            for (int j = 0; j < FoundInteractionsForWholePopulation.Count(); j++)
+            {
+                List<ConfigurationOption> interaction = FoundInteractionsForWholePopulation[j];
+                if (interaction.All((arg) => selectedOptions.Contains(arg)))
+                {
+                    double sumOfNumericValues = 0;
+                    foreach (ConfigurationOption option in interaction)
+                    {
+                        double value;
+                        if (option is NumericOption numericOption)
+                        {
+                            value = variant.NumericOptions[numericOption];
+                        }
+                        else if (option is BinaryOption binaryOption)
+                        {
+                            value = variant.BinaryOptions[binaryOption].Equals(BinaryOption.BinaryValue.Selected) ? 1 : 0;
+                        }
+                        else
+                        {
+                            throw new Exception("unknown option type");
+                        }
+                        sumOfNumericValues += value;
+                    }
+                    double coefficient = distArrayInteractions.Values[j];
+                    nfp += coefficient * sumOfNumericValues;
+                }
+            }
+            return nfp;
         }
 
         public IntergenProblem GetProblem(ProbType type)

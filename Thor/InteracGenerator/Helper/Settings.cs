@@ -45,6 +45,8 @@ namespace InteracGenerator
             set { _numberOfInteractions = value; NotifyPropertyChanged(); }
         }
 
+        public bool printsWholePopulation;
+
         public string LogFolder { get; set; }
         public bool Logging { get; set; }
         public bool Parallel { get; set; }
