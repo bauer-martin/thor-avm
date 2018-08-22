@@ -904,7 +904,8 @@ namespace InteracGenerator
 
             List<Dictionary<NumericOption, double>> numericVariants = getAllPossibleCombinations(allValuesOfNumericOptions);
 
-            generatedVariantsForWholePopulation = Configuration.getConfigurations(binaryVariants, numericVariants);
+            generatedVariantsForWholePopulation = Configuration.getConfigurations(binaryVariants, numericVariants)
+                                                               .Where((config) => Vm.NonBooleanConstraints.All((constraint) => constraint.configIsValid(config))).ToList();
 
             gen.Stop();
 
