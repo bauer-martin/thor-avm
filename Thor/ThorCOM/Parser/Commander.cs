@@ -22,6 +22,7 @@ namespace ThorCOM.Parser
         public const string COMMAND_PATH_INTERACTION_DISTRIBUTION = "interaction_distribution";
         public const string COMMAND_PATH_VARIANT_DISTRIBUTION = "variant_distribution";
         public const string COMMAND_RNG_SEED = "seed";
+        public const string COMMAND_WHOLE_POPULATION = "whole_population";
 
         public const string COMMAND_FEATUREMODEL_NUMBER_OF_INTERACTIONS = "interaction_count";
         public const string COMMAND_FEATUREMODEL_INTERACTION = "interaction_degrees";
@@ -324,6 +325,11 @@ namespace ThorCOM.Parser
                                 _model.Setting.NoVariantCalculation = !Convert.ToBoolean(argument[1]);
                                 break;
 
+                            // WHOLE POPULATION
+                            case COMMAND_WHOLE_POPULATION:
+                                _model.Setting.UsePseudoRnd = false;
+                                _model.Setting.printsWholePopulation = true;
+                                break;
 
                             //EVOLUTION SETTING
                             case COMMAND_EVOLUTION_LOGGING:
@@ -743,7 +749,11 @@ namespace ThorCOM.Parser
             var mdl = e.Argument as Thor;
             mdl.Setting.WriteSetting();
             var bw = sender as BackgroundWorker;
-            mdl?.CreateInteractions(e, bw);
+            if (_model.Setting.printsWholePopulation) {
+                mdl?.CreateInteractionsForWholePopulation(e, bw);
+            } else {
+                mdl?.CreateInteractions(e, bw);
+            }
         }
 
         private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -757,7 +767,11 @@ namespace ThorCOM.Parser
         {
             var mdl = e.Argument as Thor;
             var bw = sender as BackgroundWorker;
-            mdl?.CreateVariants(bw, e);
+            if (_model.Setting.printsWholePopulation) {
+                mdl?.CreateVariantsForWholePopulation(bw, e);
+            } else {
+                mdl?.CreateVariants(bw, e);
+            }
         }
 
         private void backgroundWorker2_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -770,13 +784,20 @@ namespace ThorCOM.Parser
         {
             var mdl = e.Argument as Thor;
             var bw = sender as BackgroundWorker;
-            try { mdl?.StartEvolution(bw, e); }
-            catch (Exception r) { Console.WriteLine("Error: Can't Start Evolution"); Console.WriteLine(r); }
+            if (_model.Setting.printsWholePopulation) {
+                mdl?.PrintWholePopulation(output_path);
+                write_finished = true;
+            } else {
+                try { mdl?.StartEvolution(bw, e); }
+                catch (Exception r) { Console.WriteLine("Error: Can't Start Evolution"); Console.WriteLine(r); }
+            }
         }
 
         private void backgroundWorker3_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            WriteResult();
+            if (!_model.Setting.printsWholePopulation) {
+                WriteResult();
+            }
         }
 
 
