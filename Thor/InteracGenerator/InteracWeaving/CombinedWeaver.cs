@@ -30,6 +30,9 @@ namespace InteracGenerator.InteracWeaving
         {
             FoundInteractions = new List<List<ConfigurationOption>>();
             FeatureList.RemoveAll((feature) => feature.Name.Equals("root"));
+            FeatureList.RemoveAll((feature) => (feature is BinaryOption)
+                                  && !((BinaryOption)feature).Optional
+                                  && !((BinaryOption)feature).hasAlternatives());
             _featureDegreeValues = Model.DStore.SelectedFeatureDegreeDistribution.Values;
         }
 
