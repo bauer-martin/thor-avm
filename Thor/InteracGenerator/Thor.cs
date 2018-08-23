@@ -1021,7 +1021,8 @@ namespace InteracGenerator
             {
                 var index = allOptions.IndexOf(entry.Key);
                 double coefficient = distArrayIndividual.Values[index];
-                nfp += coefficient * entry.Value;
+                double rescaledCoefficient = Rescale(coefficient, entry.Key);
+                nfp += rescaledCoefficient * entry.Value;
             }
 
             // find all enabled features
@@ -1066,10 +1067,26 @@ namespace InteracGenerator
                         sumOfNumericValues += value;
                     }
                     double coefficient = distArrayInteractions.Values[j];
-                    nfp += coefficient * sumOfNumericValues;
+                    double rescaledCoefficient = Rescale(coefficient, interaction);
+                    nfp += rescaledCoefficient * sumOfNumericValues;
                 }
             }
             return nfp;
+        }
+
+        private double Rescale(double influence, NumericOption option) {
+            return influence / (option.Max_value - option.Min_value);
+        }
+
+        private double Rescale(double influence, List<ConfigurationOption> interaction) {
+            IEnumerable<NumericOption> numericOptions = interaction.Where((arg) => arg is NumericOption)
+                                                                   .Select((arg) => (NumericOption)arg);
+            if (numericOptions.Count() == 0) {
+                return influence;
+            }
+            double min = numericOptions.Aggregate(Double.MaxValue, (acc, option) => Math.Min(acc, option.Min_value));
+            double max = numericOptions.Aggregate(Double.MinValue, (acc, option) => Math.Max(acc, option.Max_value));
+            return influence / (max - min);
         }
 
         public IntergenProblem GetProblem(ProbType type)
